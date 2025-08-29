@@ -119,6 +119,8 @@ CONFIG: Dict[str, Any] = {
 
 @dataclass
 class State:
+    stage_history: List[str] = field(default_factory=list)
+    decision: Optional[Dict[str, Any]] = None
     # Input schema
     customer_name: str = ""
     email: str = ""
