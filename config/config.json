@@ -1,0 +1,237 @@
+# LangGraph Customer Support Agent Configuration
+# Author: Generated for task submission
+
+agent_config:
+  name: "Langie"
+  description: "Structured and logical Lang Graph Agent for Customer Support"
+  version: "1.0.0"
+
+# Input Schema
+input_schema:
+  required_fields:
+    - customer_name: 
+        type: string
+        description: "Customer's full name"
+    - email:
+        type: string
+        description: "Customer's email address"
+        format: email
+    - query:
+        type: string
+        description: "Customer's support query or issue"
+    - priority:
+        type: string
+        enum: ["low", "medium", "high", "critical"]
+        default: "medium"
+    - ticket_id:
+        type: string
+        description: "Unique ticket identifier"
+
+# Stage Definitions
+stages:
+  1_intake:
+    name: "INTAKE"
+    mode: "payload_entry"
+    description: "Accept incoming request payload"
+    abilities:
+      - name: "accept_payload"
+        server: "internal"
+        description: "Capture incoming request payload"
+    user_prompt: "Initialize workflow with customer data"
+
+  2_understand:
+    name: "UNDERSTAND"
+    mode: "deterministic"
+    description: "Parse request text and extract entities"
+    abilities:
+      - name: "parse_request_text"
+        server: "common"
+        description: "Convert unstructured request to structured data"
+      - name: "extract_entities"
+        server: "atlas"
+        description: "Identify product, account, dates"
+    user_prompt: "Execute abilities in sequence to understand the request"
+
+  3_prepare:
+    name: "PREPARE"
+    mode: "deterministic"
+    description: "Normalize, enrich, and calculate flags"
+    abilities:
+      - name: "normalize_fields"
+        server: "common"
+        description: "Standardize dates, codes, IDs"
+      - name: "enrich_records"
+        server: "atlas"
+        description: "Add SLA, historical ticket info"
+      - name: "add_flags_calculations"
+        server: "common"
+        description: "Compute priority or SLA risk"
+    user_prompt: "Execute abilities in sequence to prepare data"
+
+  4_ask:
+    name: "ASK"
+    mode: "human"
+    description: "Request missing information if needed"
+    abilities:
+      - name: "clarify_question"
+        server: "atlas"
+        description: "Request missing information"
+    user_prompt: "Determine if clarification is needed and ask customer"
+
+  5_wait:
+    name: "WAIT"
+    mode: "deterministic"
+    description: "Capture and store customer response"
+    abilities:
+      - name: "extract_answer"
+        server: "atlas"
+        description: "Wait and capture concise response"
+      - name: "store_answer"
+        server: "internal"
+        description: "Update payload with response"
+    user_prompt: "Execute abilities in sequence to capture response"
+
+  6_retrieve:
+    name: "RETRIEVE"
+    mode: "deterministic"
+    description: "Search knowledge base for relevant information"
+    abilities:
+      - name: "knowledge_base_search"
+        server: "atlas"
+        description: "Lookup KB or FAQ"
+      - name: "store_data"
+        server: "internal"
+        description: "Attach retrieved info to payload"
+    user_prompt: "Execute abilities in sequence to retrieve knowledge"
+
+  7_decide:
+    name: "DECIDE"
+    mode: "non_deterministic"
+    description: "Evaluate solutions and make escalation decision"
+    abilities:
+      - name: "solution_evaluation"
+        server: "common"
+        description: "Score potential solutions 1-100"
+      - name: "escalation_decision"
+        server: "atlas"
+        description: "Assign to human agent if score <90"
+      - name: "update_payload"
+        server: "internal"
+        description: "Record decision outcomes"
+    user_prompt: "Score solutions and escalate if <90, otherwise auto-resolve"
+
+  8_update:
+    name: "UPDATE"
+    mode: "deterministic"
+    description: "Update ticket status and information"
+    abilities:
+      - name: "update_ticket"
+        server: "atlas"
+        description: "Modify status, fields, priority"
+      - name: "close_ticket"
+        server: "atlas"
+        description: "Mark issue resolved"
+    user_prompt: "Execute abilities in sequence to update ticket"
+
+  9_create:
+    name: "CREATE"
+    mode: "deterministic"
+    description: "Generate customer response"
+    abilities:
+      - name: "response_generation"
+        server: "common"
+        description: "Draft customer reply"
+    user_prompt: "Execute ability to generate response"
+
+  10_do:
+    name: "DO"
+    mode: "deterministic"
+    description: "Execute API calls and trigger notifications"
+    abilities:
+      - name: "execute_api_calls"
+        server: "atlas"
+        description: "Trigger CRM/order system actions"
+      - name: "trigger_notifications"
+        server: "atlas"
+        description: "Notify customer"
+    user_prompt: "Execute abilities in sequence to perform actions"
+
+  11_complete:
+    name: "COMPLETE"
+    mode: "payload_output"
+    description: "Output final structured payload"
+    abilities:
+      - name: "output_payload"
+        server: "internal"
+        description: "Print final structured payload"
+    user_prompt: "Finalize and output the complete workflow result"
+
+# MCP Server Mapping
+mcp_servers:
+  common:
+    description: "Abilities with no external data"
+    capabilities:
+      - "parse_request_text"
+      - "normalize_fields"
+      - "add_flags_calculations"
+      - "solution_evaluation"
+      - "response_generation"
+  
+  atlas:
+    description: "Abilities requiring external system interaction"
+    capabilities:
+      - "extract_entities"
+      - "enrich_records"
+      - "clarify_question"
+      - "extract_answer"
+      - "knowledge_base_search"
+      - "escalation_decision"
+      - "update_ticket"
+      - "close_ticket"
+      - "execute_api_calls"
+      - "trigger_notifications"
+
+# State Management
+state_variables:
+  persistent_across_stages:
+    - "customer_name"
+    - "email"
+    - "query"
+    - "priority"
+    - "ticket_id"
+    - "stage_history"
+    - "execution_log"
+    - "current_stage"
+  
+  stage_specific:
+    - "parsed_request"
+    - "entities"
+    - "normalized_data"
+    - "enriched_records"
+    - "flags_calculations"
+    - "clarification_needed"
+    - "customer_response"
+    - "knowledge_base_results"
+    - "solution_scores"
+    - "escalation_decision"
+    - "ticket_updates"
+    - "generated_response"
+    - "api_results"
+    - "notifications_sent"
+    - "completed_at"
+
+# Agent Personality
+personality:
+  traits:
+    - "Structured and logical"
+    - "Stage-oriented thinking"
+    - "State-aware processing"
+    - "Decision logging"
+    - "MCP orchestration"
+  
+  behavior:
+    - "Think in stages: each node represents a clear phase"
+    - "Carefully carry forward state variables"
+    - "Know when to execute sequentially vs dynamically"
+    - "Orchestrate MCP clients appropriately"
+    - "Log every decision clearly"
