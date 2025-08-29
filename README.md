@@ -49,7 +49,7 @@ INTAKE → UNDERSTAND → PREPARE → ASK → WAIT → RETRIEVE → DECIDE → U
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
+git clone <github.com:Ridwan2020py/Customer-support-agent.git>
 cd langgraph-customer-support-agent
 
 # Create virtual environment
@@ -208,67 +208,3 @@ langgraph-customer-support-agent/
 └── docs/                        # Documentation
     └── architecture.md
 ```
-
-## 🎥 Demo Video Script
-
-### Part 1: Architecture Overview (2 minutes)
-- Show the 11-stage workflow diagram
-- Explain deterministic vs non-deterministic stages
-- Demonstrate MCP server routing (Common vs Atlas)
-
-### Part 2: Code Walkthrough (3 minutes)
-- Open `customer_support_agent.py`
-- Show state management implementation
-- Highlight key stages: UNDERSTAND, DECIDE, COMPLETE
-- Explain MCP client integration
-
-### Part 3: Live Execution (3 minutes)
-- Run `python customer_support_agent.py`
-- Walk through console output
-- Show stage-by-stage execution
-- Highlight decision logic in DECIDE stage
-- Show final structured payload
-
-### Part 4: Configuration & Testing (2 minutes)
-- Show `agent_config.yaml` structure
-- Demonstrate test execution
-- Explain submission deliverables
-
-## ✅ Submission Checklist
-
-- [x] **LangGraph Agent Implementation**: Complete working agent with all 11 stages
-- [x] **Configuration File**: YAML config with stage definitions and MCP mappings
-- [x] **State Persistence**: Demonstrates state management across stages
-- [x] **MCP Integration**: Routes abilities to Common and Atlas servers
-- [x] **Non-Deterministic Logic**: DECIDE stage with dynamic escalation
-- [x] **Demo Execution**: Shows complete workflow with sample input
-- [x] **Comprehensive Logging**: Tracks stage execution and decisions
-- [x] **Test Suite**: Unit tests for core functionality
-- [x] **Documentation**: README with architecture and usage instructions
-
-## 📧 Submission Details
-
-**Email**: santosh.thota@analytos.ai  
-**CC**: shashwat.shlok@analytos.ai, sasidhar.sunkesula@analytos.ai  
-**Subject**: Lang Graph Agent Task - [Your Name]
-
-### Attachments
-1. GitHub repository link
-2. Latest resume
-3. Demo video (OneDrive/Google Drive link)
-
-## 🔮 Future Enhancements
-
-- Real MCP server integration
-- Advanced routing logic
-- Performance monitoring
-- Multi-tenant support
-- Integration with actual CRM systems
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 👨‍💻 Author
-
-[Your Name] - Submitted for LangGraph Agent Assessment
