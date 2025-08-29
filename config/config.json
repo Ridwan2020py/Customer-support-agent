@@ -1,5 +1,5 @@
 # LangGraph Customer Support Agent Configuration
-# Author: Generated for task submission
+
 
 agent_config:
   name: "Langie"
