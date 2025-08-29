@@ -1,61 +1,274 @@
-# New LangGraph Project
+# LangGraph Customer Support Agent
 
-[![CI](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/unit-tests.yml)
-[![Integration Tests](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/integration-tests.yml)
+A structured, stage-based customer support agent built with LangGraph, implementing 11-stage workflow with MCP client orchestration.
 
-This template demonstrates a simple application implemented using [LangGraph](https://github.com/langchain-ai/langgraph), designed for showing how to get started with [LangGraph Server](https://langchain-ai.github.io/langgraph/concepts/langgraph_server/#langgraph-server) and using [LangGraph Studio](https://langchain-ai.github.io/langgraph/concepts/langgraph_studio/), a visual debugging IDE.
+## 🎯 Overview
 
-<div align="center">
-  <img src="./static/studio_ui.png" alt="Graph view in LangGraph studio UI" width="75%" />
-</div>
+**Langie** is a LangGraph Agent that models customer support workflows as graph-based stages. Each stage represents a step in the workflow, with state persistence and dynamic ability orchestration through MCP (Model Context Protocol) clients.
 
-The core logic defined in `src/agent/graph.py`, showcases an single-step application that responds with a fixed string and the configuration provided.
+### Key Features
 
-You can extend this graph to orchestrate more complex agentic workflows that can be visualized and debugged in LangGraph Studio.
+- **11-Stage Workflow**: Complete customer support process from intake to completion
+- **State Persistence**: Maintains context and data across all stages
+- **MCP Integration**: Routes abilities to Common and Atlas servers
+- **Non-Deterministic Logic**: Dynamic decision-making in the DECIDE stage
+- **Comprehensive Logging**: Tracks execution flow and decisions
 
-## Getting Started
+## 🏗️ Architecture
 
-1. Install dependencies, along with the [LangGraph CLI](https://langchain-ai.github.io/langgraph/concepts/langgraph_cli/), which will be used to run the server.
+### Stage Flow
+
+```
+INTAKE → UNDERSTAND → PREPARE → ASK → WAIT → RETRIEVE → DECIDE → UPDATE → CREATE → DO → COMPLETE
+```
+
+### Stage Details
+
+| Stage | Mode | Abilities | MCP Server | Description |
+|-------|------|-----------|------------|-------------|
+| INTAKE | Entry | accept_payload | Internal | Accept incoming request |
+| UNDERSTAND | Deterministic | parse_request_text, extract_entities | Common, Atlas | Parse and extract entities |
+| PREPARE | Deterministic | normalize_fields, enrich_records, add_flags_calculations | Common, Atlas | Data normalization and enrichment |
+| ASK | Human | clarify_question | Atlas | Request missing information |
+| WAIT | Deterministic | extract_answer, store_answer | Atlas, Internal | Capture customer response |
+| RETRIEVE | Deterministic | knowledge_base_search, store_data | Atlas, Internal | Knowledge base lookup |
+| DECIDE | Non-Deterministic | solution_evaluation, escalation_decision, update_payload | Common, Atlas | Score solutions and decide escalation |
+| UPDATE | Deterministic | update_ticket, close_ticket | Atlas | Update ticket status |
+| CREATE | Deterministic | response_generation | Common | Generate customer response |
+| DO | Deterministic | execute_api_calls, trigger_notifications | Atlas | Execute actions and notifications |
+| COMPLETE | Output | output_payload | Internal | Output final payload |
+
+### MCP Server Distribution
+
+- **Common Server**: Internal abilities with no external data requirements
+- **Atlas Server**: External system interactions and data retrieval
+
+## 🚀 Quick Start
+
+### Installation
 
 ```bash
-cd path/to/your/app
-pip install -e . "langgraph-cli[inmem]"
+# Clone the repository
+git clone <your-repo-url>
+cd langgraph-customer-support-agent
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-2. (Optional) Customize the code and project as needed. Create a `.env` file if you need to use secrets.
+### Running the Demo
 
 ```bash
-cp .env.example .env
+python customer_support_agent.py
 ```
 
-If you want to enable LangSmith tracing, add your LangSmith API key to the `.env` file.
+### Sample Input
 
-```text
-# .env
-LANGSMITH_API_KEY=lsv2...
+```json
+{
+  "customer_name": "John Smith",
+  "email": "john.smith@email.com", 
+  "query": "I was charged twice for my premium subscription this month",
+  "priority": "high",
+  "ticket_id": "12345"
+}
 ```
 
-3. Start the LangGraph Server.
+### Expected Output
 
-```shell
-langgraph dev
+```json
+{
+  "customer_name": "John Smith",
+  "email": "john.smith@email.com",
+  "query": "I was charged twice for my premium subscription this month",
+  "priority": "high",
+  "ticket_id": "12345",
+  "escalation_decision": false,
+  "ticket_updates": {"status": "resolved", "resolution": "auto_resolved"},
+  "generated_response": "Dear John Smith, we have reviewed your I was charged twice for my premium subscription this month and...",
+  "notifications_sent": ["email_sent", "sms_sent"],
+  "completed_at": "2024-08-28T10:30:00"
+}
 ```
 
-For more information on getting started with LangGraph Server, [see here](https://langchain-ai.github.io/langgraph/tutorials/langgraph-platform/local-server/).
+## 🔧 Implementation Details
 
-## How to customize
+### State Management
 
-1. **Define runtime context**: Modify the `Context` class in the `graph.py` file to expose the arguments you want to configure per assistant. For example, in a chatbot application you may want to define a dynamic system prompt or LLM to use. For more information on runtime context in LangGraph, [see here](https://langchain-ai.github.io/langgraph/agents/context/?h=context#static-runtime-context).
+The agent maintains comprehensive state across all stages:
 
-2. **Extend the graph**: The core logic of the application is defined in [graph.py](./src/agent/graph.py). You can modify this file to add new nodes, edges, or change the flow of information.
+```python
+class CustomerSupportState(TypedDict):
+    # Input fields
+    customer_name: str
+    email: str
+    query: str
+    priority: str
+    ticket_id: str
+    
+    # Processing fields
+    parsed_request: Optional[Dict[str, Any]]
+    entities: Optional[Dict[str, Any]]
+    # ... additional fields
+    
+    # Metadata
+    stage_history: List[str]
+    execution_log: List[Dict[str, Any]]
+    current_stage: str
+```
 
-## Development
+### Non-Deterministic Decision Logic
 
-While iterating on your graph in LangGraph Studio, you can edit past state and rerun your app from previous states to debug specific nodes. Local changes will be automatically applied via hot reload.
+The DECIDE stage implements dynamic logic:
 
-Follow-up requests extend the same thread. You can create an entirely new thread, clearing previous history, using the `+` button in the top right.
+```python
+# Evaluate solutions and escalate if best score < 90
+best_score = max(solution["score"] for solution in state["solution_scores"])
 
-For more advanced features and examples, refer to the [LangGraph documentation](https://langchain-ai.github.io/langgraph/). These resources can help you adapt this template for your specific use case and build more sophisticated conversational agents.
+if best_score < 90:
+    state["escalation_decision"] = True
+    # Route to human agent
+else:
+    state["escalation_decision"] = False  
+    # Auto-resolve
+```
 
-LangGraph Studio also integrates with [LangSmith](https://smith.langchain.com/) for more in-depth tracing and collaboration with teammates, allowing you to analyze and optimize your chatbot's performance.
+### MCP Client Integration
 
+```python
+class MCPClient:
+    def execute_ability(self, ability_name: str, payload: Dict[str, Any]):
+        # Routes abilities to appropriate server (Common/Atlas)
+        # Returns structured results for state updates
+```
+
+## 📊 Demo Execution Log
+
+```
+🤖 LANGIE - Customer Support Agent Demo
+========================================
+
+📥 Input Payload:
+{
+  "customer_name": "John Smith",
+  "email": "john.smith@email.com",
+  "query": "I was charged twice for my premium subscription this month",
+  "priority": "high",
+  "ticket_id": "12345"
+}
+
+🔄 Processing through 11 stages...
+
+📊 Stage Execution Summary:
+  ✅ INTAKE - accept_payload
+  ✅ UNDERSTAND - parse_request_text, extract_entities
+  ✅ PREPARE - normalize_fields, enrich_records, add_flags_calculations
+  ✅ ASK - clarify_question
+  ✅ WAIT - extract_answer, store_answer
+  ✅ RETRIEVE - knowledge_base_search, store_data
+  ✅ DECIDE - solution_evaluation, escalation_decision, update_payload
+  ✅ UPDATE - update_ticket, close_ticket
+  ✅ CREATE - response_generation
+  ✅ DO - execute_api_calls, trigger_notifications
+  ✅ COMPLETE - output_payload
+
+🏁 Final Status: resolved
+📧 Generated Response: Dear John Smith, we have reviewed your I was charged twice for my premium subscription this month and...
+🔔 Notifications: email_sent, sms_sent
+```
+
+## 🧪 Testing
+
+```bash
+# Run tests
+python -m pytest tests/
+
+# Run specific test
+python -m unittest tests.test_agent.TestCustomerSupportAgent.test_complete_workflow
+```
+
+## 📁 Project Structure
+
+```
+langgraph-customer-support-agent/
+├── customer_support_agent.py      # Main implementation
+├── agent_config.yaml             # Configuration
+├── requirements.txt               # Dependencies  
+├── setup.py                      # Package setup
+├── README.md                     # This file
+├── tests/                        # Test suite
+│   ├── test_agent.py
+│   └── test_stages.py
+├── examples/                     # Usage examples
+│   └── sample_inputs.json
+└── docs/                        # Documentation
+    └── architecture.md
+```
+
+## 🎥 Demo Video Script
+
+### Part 1: Architecture Overview (2 minutes)
+- Show the 11-stage workflow diagram
+- Explain deterministic vs non-deterministic stages
+- Demonstrate MCP server routing (Common vs Atlas)
+
+### Part 2: Code Walkthrough (3 minutes)
+- Open `customer_support_agent.py`
+- Show state management implementation
+- Highlight key stages: UNDERSTAND, DECIDE, COMPLETE
+- Explain MCP client integration
+
+### Part 3: Live Execution (3 minutes)
+- Run `python customer_support_agent.py`
+- Walk through console output
+- Show stage-by-stage execution
+- Highlight decision logic in DECIDE stage
+- Show final structured payload
+
+### Part 4: Configuration & Testing (2 minutes)
+- Show `agent_config.yaml` structure
+- Demonstrate test execution
+- Explain submission deliverables
+
+## ✅ Submission Checklist
+
+- [x] **LangGraph Agent Implementation**: Complete working agent with all 11 stages
+- [x] **Configuration File**: YAML config with stage definitions and MCP mappings
+- [x] **State Persistence**: Demonstrates state management across stages
+- [x] **MCP Integration**: Routes abilities to Common and Atlas servers
+- [x] **Non-Deterministic Logic**: DECIDE stage with dynamic escalation
+- [x] **Demo Execution**: Shows complete workflow with sample input
+- [x] **Comprehensive Logging**: Tracks stage execution and decisions
+- [x] **Test Suite**: Unit tests for core functionality
+- [x] **Documentation**: README with architecture and usage instructions
+
+## 📧 Submission Details
+
+**Email**: santosh.thota@analytos.ai  
+**CC**: shashwat.shlok@analytos.ai, sasidhar.sunkesula@analytos.ai  
+**Subject**: Lang Graph Agent Task - [Your Name]
+
+### Attachments
+1. GitHub repository link
+2. Latest resume
+3. Demo video (OneDrive/Google Drive link)
+
+## 🔮 Future Enhancements
+
+- Real MCP server integration
+- Advanced routing logic
+- Performance monitoring
+- Multi-tenant support
+- Integration with actual CRM systems
+
+## 📄 License
+
+MIT License - see LICENSE file for details
+
+## 👨‍💻 Author
+
+[Your Name] - Submitted for LangGraph Agent Assessment
